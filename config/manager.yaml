@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trainer-module-controller
+  namespace: system
+  labels:
+    control-plane: trainer-module-controller
+    app.kubernetes.io/name: trainer-module
+    app.kubernetes.io/component: controller
+spec:
+  selector:
+    matchLabels:
+      control-plane: trainer-module-controller
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: trainer-module-controller
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - command:
+        - /manager
+        args:
+        - --leader-elect
+        - --health-probe-addr=:8081
+        image: controller:latest
+        name: manager
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        # TODO: RELATED_IMAGE_* env vars will be injected by platform operator (RHOAIENG-60765)
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - "ALL"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      serviceAccountName: trainer-module-controller
+      terminationGracePeriodSeconds: 10

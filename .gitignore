@@ -1,0 +1,5 @@
+# Generated binaries and tools
+bin/
+
+# Collected manifests
+opt/

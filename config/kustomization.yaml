@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Adds namespace to all resources.
+namespace: trainer-module-system
+
+# Labels to add to all resources and selectors.
+commonLabels:
+  app.kubernetes.io/name: trainer-module
+  app.kubernetes.io/component: controller
+
+resources:
+- crd/
+- rbac/
+- manager.yaml

@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trainer-module-manager-role
+rules:
+# Permissions for Trainer CRD
+- apiGroups:
+  - components.platform.opendatahub.io
+  resources:
+  - trainers
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - components.platform.opendatahub.io
+  resources:
+  - trainers/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - components.platform.opendatahub.io
+  resources:
+  - trainers/finalizers
+  verbs:
+  - update
+# TODO: Add more permissions in later tickets:
+# - JobSet Operator CRD read permissions (RHOAIENG-60764)
+# - Trainer application resources (Deployment, Service, etc.) (RHOAIENG-60763)
+# - ClusterTrainingRuntime resources (RHOAIENG-60765)
