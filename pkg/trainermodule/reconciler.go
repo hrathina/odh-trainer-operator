@@ -42,10 +42,3 @@ func (r *TrainerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	return ctrl.Result{}, nil
 }
-
-// SetupWithManager sets up the controller with the Manager
-func (r *TrainerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&platformv1alpha1.Trainer{}).
-		Complete(r)
-}

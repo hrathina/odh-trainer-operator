@@ -1,0 +1,15 @@
+# Allowlist: exclude everything, then add back only what the Dockerfile needs.
+
+# Exclude everything by default
+*
+
+# Go module files
+!go.mod
+!go.sum
+
+# Source directories
+!cmd/
+!pkg/
+
+# Build script
+!hack/
