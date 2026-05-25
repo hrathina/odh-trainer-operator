@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/opendatahub-io/odh-platform-utilities/api/common"
+	"github.com/opendatahub-io/odh-platform-utilities/pkg/metadata/labels"
 
 	componentsv1alpha1 "github.com/hrathina/odh-trainer-operator/api/v1alpha1"
 )
@@ -251,7 +252,7 @@ func TestCleanupTrainerResourcesDeletesLabeledResources(t *testing.T) {
 	trGVR := schema.GroupVersionResource{Group: trainerKubeflowGroup, Version: trainerKubeflowVersion, Resource: "trainingruntimes"}
 	trGVK := schema.GroupVersionKind{Group: trainerKubeflowGroup, Version: trainerKubeflowVersion, Kind: "TrainingRuntime"}
 
-	labeledCTR := newUnstructured(ctrGVK, "labeled-ctr", "", map[string]string{"platform.opendatahub.io/part-of": trainerPartOf})
+	labeledCTR := newUnstructured(ctrGVK, "labeled-ctr", "", map[string]string{labels.PlatformPartOf: trainerPartOf})
 	_, err := dynamicClient.Resource(ctrGVR).Create(ctx, labeledCTR, metav1.CreateOptions{})
 	g.Expect(err).NotTo(HaveOccurred())
 
@@ -263,7 +264,7 @@ func TestCleanupTrainerResourcesDeletesLabeledResources(t *testing.T) {
 	g.Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 	t.Cleanup(func() { _ = k8sClient.Delete(ctx, ns) })
 
-	labeledTR := newUnstructured(trGVK, "labeled-tr", "tr-test-ns", map[string]string{"platform.opendatahub.io/part-of": trainerPartOf})
+	labeledTR := newUnstructured(trGVK, "labeled-tr", "tr-test-ns", map[string]string{labels.PlatformPartOf: trainerPartOf})
 	_, err = dynamicClient.Resource(trGVR).Namespace("tr-test-ns").Create(ctx, labeledTR, metav1.CreateOptions{})
 	g.Expect(err).NotTo(HaveOccurred())
 
@@ -393,15 +394,15 @@ func TestDeploymentHealthCheckFailure(t *testing.T) {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "trainer"},
+				MatchLabels: map[string]string{"app": trainerPartOf},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "trainer"},
+					Labels: map[string]string{"app": trainerPartOf},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: "trainer", Image: "trainer:latest"},
+						{Name: trainerPartOf, Image: trainerPartOf + ":latest"},
 					},
 				},
 			},
@@ -436,15 +437,15 @@ func int32Ptr(i int32) *int32 {
 	return &i
 }
 
-func newUnstructured(gvk schema.GroupVersionKind, name, namespace string, labels map[string]string) *unstructured.Unstructured {
+func newUnstructured(gvk schema.GroupVersionKind, name, namespace string, objLabels map[string]string) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gvk)
 	obj.SetName(name)
 	if namespace != "" {
 		obj.SetNamespace(namespace)
 	}
-	if labels != nil {
-		obj.SetLabels(labels)
+	if objLabels != nil {
+		obj.SetLabels(objLabels)
 	}
 	return obj
 }

@@ -198,11 +198,6 @@ func (r *TrainerReconciler) reconcileManaged(ctx context.Context, trainer *compo
 		return ctrl.Result{}, stderrors.Join(err, r.updateStatus(ctx, trainer, common.PhaseNotReady))
 	}
 
-	if err := r.checkClusterTrainingRuntimes(ctx); err != nil {
-		cm.MarkFalse(provisioningCondition, conditions.WithReason("ClusterTrainingRuntimeNotReady"), conditions.WithError(err))
-		return ctrl.Result{}, stderrors.Join(err, r.updateStatus(ctx, trainer, common.PhaseNotReady))
-	}
-
 	cm.MarkTrue(provisioningCondition, conditions.WithReason("Provisioned"), conditions.WithMessage("Trainer resources provisioned successfully"))
 
 	return ctrl.Result{}, r.updateStatus(ctx, trainer, common.PhaseReady)
@@ -287,7 +282,7 @@ func (r *TrainerReconciler) checkDeploymentHealth(ctx context.Context, namespace
 	log := logf.FromContext(ctx)
 
 	deployments := &appsv1.DeploymentList{}
-	err := r.Client.List(
+	err := r.List(
 		ctx,
 		deployments,
 		client.InNamespace(namespace),
@@ -303,41 +298,22 @@ func (r *TrainerReconciler) checkDeploymentHealth(ctx context.Context, namespace
 	}
 
 	ready := 0
+	var notReadyDeployments []string
 	for _, deployment := range deployments.Items {
 		if deployment.Status.ReadyReplicas == deployment.Status.Replicas && deployment.Status.Replicas != 0 {
 			ready++
+		} else {
+			log.Info("Deployment not ready", "name", deployment.Name, "namespace", deployment.Namespace,
+				"readyReplicas", deployment.Status.ReadyReplicas, "replicas", deployment.Status.Replicas)
+			notReadyDeployments = append(notReadyDeployments, deployment.Name)
 		}
 	}
 
 	if ready != len(deployments.Items) {
-		log.Info("Deployments not ready", "ready", ready, "total", len(deployments.Items))
-		return fmt.Errorf("%d/%d deployments ready", ready, len(deployments.Items))
+		return fmt.Errorf("%d/%d deployments ready: %v", ready, len(deployments.Items), notReadyDeployments)
 	}
 
 	log.V(1).Info("All deployments are ready", "count", len(deployments.Items))
-	return nil
-}
-
-func (r *TrainerReconciler) checkClusterTrainingRuntimes(ctx context.Context) error {
-	log := logf.FromContext(ctx)
-
-	ctrs := buildClusterTrainingRuntimes()
-
-	for _, ctr := range ctrs {
-		obj := &schema.GroupVersionResource{
-			Group:    trainerKubeflowGroup,
-			Version:  trainerKubeflowVersion,
-			Resource: "clustertrainingruntimes",
-		}
-
-		_, err := r.DynamicClient.Resource(*obj).Get(ctx, ctr.Name, metav1.GetOptions{})
-		if err != nil {
-			log.Error(err, "ClusterTrainingRuntime not found", "name", ctr.Name)
-			return fmt.Errorf("ClusterTrainingRuntime %s not ready: %w", ctr.Name, err)
-		}
-	}
-
-	log.V(1).Info("All ClusterTrainingRuntimes verified", "count", len(ctrs))
 	return nil
 }
 
