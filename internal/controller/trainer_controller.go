@@ -305,7 +305,7 @@ func (r *TrainerReconciler) checkDeploymentHealth(ctx context.Context, namespace
 		} else {
 			log.Info("Deployment not ready", "name", deployment.Name, "namespace", deployment.Namespace,
 				"readyReplicas", deployment.Status.ReadyReplicas, "replicas", deployment.Status.Replicas)
-			notReadyDeployments = append(notReadyDeployments, deployment.Name)
+			notReadyDeployments = append(notReadyDeployments, deployment.Namespace+"/"+deployment.Name)
 		}
 	}
 
